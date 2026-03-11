@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+
+    <!--include defination-->
+    <xmacro_include uri="model://rplidar_a2/model.sdf.xmacro" />
+    <xmacro_include uri="model://mid360/model.sdf.xmacro" />
+    <xmacro_include uri="model://industrial_camera/model.sdf.xmacro" />
+    <xmacro_include uri="model://rm25_example_robot/rm25_example_robot.def.xmacro" />
+    <!--property defination-->
+    <xmacro_define_value name="global_initial_color" value="none" />
+    <xmacro_define_value name="global_armor_sticker_type" value="num3" />
+    <!-- 底盘距离水平地面的高度 -->
+    <xmacro_define_value name="chassis_height" value="0.077" />
+    <!-- gimbal_yaw 相对于底盘的 z 轴安装偏移 -->
+    <xmacro_define_value name="gimbal_yaw_height" value="0.026" />
+    <!-- gimbal_pitch 相对于 gimbal_yaw 的高度差 -->
+    <xmacro_define_value name="gimbal_pitch_height" value="0.355" />
+
+    <!--pb2025_sentry_robot model-->
+    <model name="pb2025_sentry_robot">
+
+        <pose>0 0 0.15 0 0 0</pose>
+        <xmacro_block name="rm25_example_robot" sticker_type="${global_armor_sticker_type}" chassis_height="${chassis_height}" gimbal_yaw_height="${gimbal_yaw_height}" gimbal_pitch_height="${gimbal_pitch_height}"/>
+        <!--livox-->
+        <xmacro_block name="livox" prefix="front_" parent="chassis" pose="0.0496 0.0936 0.435 -${pi/12} 0 0" update_rate="20" samples="1875"/>
+        <!--industrial camera-->
+        <xmacro_block name="industrial_camera" prefix="front_" parent="gimbal_pitch" pose="0.1 0 0.045 0 0 0" update_rate="30" horizontal_fov="1" width="1920" height="1080"/>
+
+        <!--plugins-->
+        <!-- https://github.com/gazebosim/gz-sim/blob/ign-gazebo6/src/systems -->
+
+        <!--plugin for joint state sensor-->
+        <plugin filename="ignition-gazebo-joint-state-publisher-system" name="ignition::gazebo::systems::JointStatePublisher">
+        </plugin>
+
+        <!--plugin for light bar-->
+        <plugin filename="LightBarController" name="ignition::gazebo::systems::LightBarController">
+            <controller_name>color</controller_name>
+            <link_visual>armor_0/light_bar_visual</link_visual>
+            <link_visual>armor_1/light_bar_visual</link_visual>
+            <link_visual>armor_2/light_bar_visual</link_visual>
+            <link_visual>armor_3/light_bar_visual</link_visual>
+            <link_visual>light_indicator/light_bar_visual</link_visual>
+            <link_visual>speed_monitor/light_bar_visual</link_visual>
+            <initial_color>${global_initial_color}</initial_color>
+        </plugin>
+
+        <!--plugin for chassis control-->
+        <plugin filename="MecanumDrive2" name="ignition::gazebo::systems::MecanumDrive2">
+            <chassis_link>chassis</chassis_link>
+            <front_left_joint>front_left_wheel_joint</front_left_joint>
+            <front_right_joint>front_right_wheel_joint</front_right_joint>
+            <rear_left_joint>rear_left_wheel_joint</rear_left_joint>
+            <rear_right_joint>rear_right_wheel_joint</rear_right_joint>
+        </plugin>
+
+        <!--plugin for gimbal control-->
+        <plugin filename="ignition-gazebo-joint-controller-system" name="ignition::gazebo::systems::JointController">
+            <joint_name>gimbal_yaw_joint</joint_name>
+            <use_force_commands>false</use_force_commands>
+            <p_gain>0.2</p_gain>
+            <i_gain>0.01</i_gain>
+        </plugin>
+
+        <plugin filename="ignition-gazebo-joint-controller-system" name="ignition::gazebo::systems::JointController">
+            <joint_name>gimbal_pitch_joint</joint_name>
+            <use_force_commands>false</use_force_commands>
+            <p_gain>1</p_gain>
+            <i_gain>0.01</i_gain>
+        </plugin>
+
+        <!--plugin for shooter-->
+        <plugin filename="ProjectileShooter" name="ignition::gazebo::systems::ProjectileShooter">
+            <shooter_link>speed_monitor</shooter_link>
+            <shooter_offset>0.15 0 0 0 0 0</shooter_offset>
+            <shooter_name>small_shooter</shooter_name>
+            <projectile_velocity>20</projectile_velocity>
+            <projectile_uri>model://rm_projectile_17mm</projectile_uri>
+        </plugin>
+    </model>
+</sdf>

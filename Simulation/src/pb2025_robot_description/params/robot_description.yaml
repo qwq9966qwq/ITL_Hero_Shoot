@@ -1,0 +1,11 @@
+joint_state_publisher:
+  ros__parameters:
+    use_sim_time: false
+    rate: 200
+    source_list: ["serial/gimbal_joint_state"]
+    offset_timestamp: 0.0
+
+robot_state_publisher:
+  ros__parameters:
+    use_sim_time: false
+    publish_frequency: 200.0

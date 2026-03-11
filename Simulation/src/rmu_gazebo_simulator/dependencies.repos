@@ -1,0 +1,26 @@
+repositories:
+  sdformat_tools:
+    type: git
+    url: https://github.com/gezp/sdformat_tools.git
+    version: 47c2d1a37372281e5627d444f7537efc0bba11df
+  rmoss_interfaces:
+    type: git
+    url: https://github.com/SMBU-PolarBear-Robotics-Team/rmoss_interfaces.git
+    version: 424f50c831b3e74fa72446969362cdabb2e22cd1
+  rmoss_core:
+    type: git
+    url: https://github.com/SMBU-PolarBear-Robotics-Team/rmoss_core.git
+    version: 8209ec517dfbb7ecac613cf0c9534d67ff918b7d
+  rmoss_gazebo:
+    type: git
+    url: https://github.com/SMBU-PolarBear-Robotics-Team/rmoss_gazebo.git
+    version: 7443ff06c345752d0e23172c479d99b27207e2c7
+  rmoss_gz_resources:
+    type: git
+    url: https://github.com/SMBU-PolarBear-Robotics-Team/rmoss_gz_resources.git
+    version: b5c759f08844dfda19c79aa870866ace8d4c7b3a
+    shallow: true
+  pb2025_robot_description:
+    type: git
+    url: https://github.com/SMBU-PolarBear-Robotics-Team/pb2025_robot_description.git
+    version: a0541dddcbfe376f369a6345b532a10923ad9149

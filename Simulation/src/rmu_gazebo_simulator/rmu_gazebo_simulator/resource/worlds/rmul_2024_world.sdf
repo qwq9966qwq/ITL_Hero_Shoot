@@ -1,0 +1,133 @@
+<?xml version='1.0' encoding='utf-8'?>
+<sdf version='1.7'>
+  <world name='default'>
+    <!-- Physics -->
+    <plugin filename="libignition-gazebo-physics-system.so" name="ignition::gazebo::systems::Physics">
+    </plugin>
+
+    <!-- Forwards simulation state to the GUI -->
+    <plugin filename="libignition-gazebo-scene-broadcaster-system.so" name="ignition::gazebo::systems::SceneBroadcaster">
+    </plugin>
+
+    <!-- Processes user commands, like translate and create -->
+    <plugin filename="libignition-gazebo-user-commands-system.so" name="ignition::gazebo::systems::UserCommands">
+    </plugin>
+
+    <!-- Generates rendering sensor data -->
+    <plugin filename="libignition-gazebo-sensors-system.so" name="ignition::gazebo::systems::Sensors">
+      <render_engine>ogre</render_engine>
+    </plugin>
+
+    <plugin filename="libignition-gazebo-imu-system.so" name="ignition::gazebo::systems::Imu">
+    </plugin>
+
+    <light type='directional' name='direct_light'>
+      <cast_shadows>true</cast_shadows>
+      <pose>7.4 3.6 10 0 0 0</pose>
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.5 0.5 0.5 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>0 0 -1</direction>
+    </light>
+
+    <model name='rmul_2024'>
+      <include>
+        <uri>model://rmul_2024</uri>
+      </include>
+      <pose>0.0 0.0 0 0 0 0</pose>
+      <static>true</static>
+    </model>
+
+    <model name="red_supplier">
+      <static>true</static>
+      <pose>1.86 6.85 1.2 0 0 0</pose>
+      <link name='body'>
+        <visual name='visual'>
+          <transparency>0.9</transparency>
+          <geometry>
+            <box>
+              <size>1 2 0.2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.0 1.0 0.0 1</ambient>
+            <diffuse>0.0 1.0 0.0 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+        </visual>
+      </link>
+      <!-- https://github.com/gazebosim/gz-sim/blob/ign-gazebo6/src/systems/performer_detector/PerformerDetector.hh -->
+      <plugin filename="ignition-gazebo-performer-detector-system" name="gz::sim::systems::PerformerDetector">
+        <!-- <topic>/model/red_supplier/performer_detector/status</topic> -->
+        <geometry>
+          <box>
+            <size>0 0 0</size>
+          </box>
+        </geometry>
+        <pose>0 0 0 0 0 0</pose>
+      </plugin>
+    </model>
+
+    <model name="blue_supplier">
+      <static>true</static>
+      <pose>12.85 0.85 1.2 0 0 0</pose>
+      <link name='body'>
+        <visual name='visual'>
+          <transparency>0.9</transparency>
+          <geometry>
+            <box>
+              <size>1 2 0.2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.0 1.0 0.0 1</ambient>
+            <diffuse>0.0 1.0 0.0 1</diffuse>
+            <specular>0.5 0.5 0.5 1</specular>
+          </material>
+          <cast_shadows>false</cast_shadows>
+        </visual>
+      </link>
+      <plugin filename="ignition-gazebo-performer-detector-system" name="gz::sim::systems::PerformerDetector">
+        <!-- <topic>/model/blue_supplier/performer_detector/status</topic> -->
+        <geometry>
+          <box>
+            <size>0 0 0</size>
+          </box>
+        </geometry>
+        <pose>0 0 0 0 0 0</pose>
+      </plugin>
+    </model>
+
+    <model name='ground_plane'>
+      <static>true</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+            </plane>
+          </geometry>
+        </collision>
+        <visual name='visual'>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

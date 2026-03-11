@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="hero_robot">
+
+  <!-- ====== 尺寸参数（可通过 xacro:arg 覆盖，默认值为实车） ====== -->
+  <xacro:arg name="chassis_height"      default="0.077"/>   <!-- base_footprint到chassis的离地高度 -->
+  <xacro:arg name="gimbal_yaw_height"   default="0.026"/>   <!-- chassis到yaw轴心的高度偏移 -->
+  <xacro:arg name="gimbal_pitch_height" default="0.355"/>   <!-- yaw轴心到pitch轴心的高度偏移 -->
+  <xacro:arg name="muzzle_forward"      default="0.15"/>    <!-- pitch轴心到枪口出射点的前向距离 -->
+  <xacro:arg name="mid360_x"     default="0.16"/>
+  <xacro:arg name="mid360_y"     default="0.0"/>
+  <xacro:arg name="mid360_z"     default="0.18"/>
+  <xacro:arg name="mid360_roll"  default="0.0"/>
+  <xacro:arg name="mid360_pitch" default="0.5236"/>  <!-- pi/6 ≈ 30° (实车) -->
+  <xacro:arg name="mid360_yaw"   default="0.0"/>
+
+  <xacro:property name="chassis_height"      value="$(arg chassis_height)"/>
+  <xacro:property name="gimbal_yaw_height"   value="$(arg gimbal_yaw_height)"/>
+  <xacro:property name="gimbal_pitch_height" value="$(arg gimbal_pitch_height)"/>
+  <xacro:property name="muzzle_forward"      value="$(arg muzzle_forward)"/>
+  <xacro:property name="mid360_x"     value="$(arg mid360_x)"/>
+  <xacro:property name="mid360_y"     value="$(arg mid360_y)"/>
+  <xacro:property name="mid360_z"     value="$(arg mid360_z)"/>
+  <xacro:property name="mid360_roll"  value="$(arg mid360_roll)"/>
+  <xacro:property name="mid360_pitch" value="$(arg mid360_pitch)"/>
+  <xacro:property name="mid360_yaw"   value="$(arg mid360_yaw)"/>
+
+  <!-- ====== Links ====== -->
+  <link name="base_footprint"/>
+  <link name="chassis"/>
+  <link name="front_mid360"/>
+  <link name="gimbal_yaw"/>
+  <link name="gimbal_pitch"/>
+  <link name="muzzle"/>
+
+  <!-- ====== Joints ====== -->
+
+  <!-- base_footprint -> chassis (固定：底盘离地高度) -->
+  <joint name="base_to_chassis" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="chassis"/>
+    <origin xyz="0 0 ${chassis_height}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- chassis -> front_mid360 (固定：LiDAR安装在底盘上，外参为纯静态) -->
+  <joint name="front_livox_joint" type="fixed">
+    <parent link="chassis"/>
+    <child link="front_mid360"/>
+    <origin xyz="${mid360_x} ${mid360_y} ${mid360_z}"
+            rpy="${mid360_roll} ${mid360_pitch} ${mid360_yaw}"/>
+  </joint>
+
+  <!-- chassis -> gimbal_yaw (云台yaw旋转，值=编码器相对底盘的角度) -->
+  <joint name="gimbal_yaw_joint" type="continuous">
+    <parent link="chassis"/>
+    <child link="gimbal_yaw"/>
+    <origin xyz="0 0 ${gimbal_yaw_height}" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <!-- gimbal_yaw -> gimbal_pitch (云台pitch旋转，值=编码器相对yaw的角度) -->
+  <joint name="gimbal_pitch_joint" type="revolute">
+    <parent link="gimbal_yaw"/>
+    <child link="gimbal_pitch"/>
+    <origin xyz="0 0 ${gimbal_pitch_height}" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.785" upper="0.566" velocity="50.0" effort="100.0"/>
+  </joint>
+
+  <!-- gimbal_pitch -> muzzle (固定：枪管出射口位置) -->
+  <joint name="muzzle_joint" type="fixed">
+    <parent link="gimbal_pitch"/>
+    <child link="muzzle"/>
+    <origin xyz="${muzzle_forward} 0 0" rpy="0 0 0"/>
+  </joint>
+
+</robot>

@@ -1,0 +1,132 @@
+ign_sim_pointcloud_tool:
+  ros__parameters:
+    pcd_topic: livox/lidar
+    n_scan: 32
+    horizon_scan: 1875
+    ang_bottom: 7.0
+    ang_res_y: 1.84375  # (7+52) / 32
+
+point_lio:
+  ros__parameters:
+    use_imu_as_input: False                            # Output模型，参考项目验证稳定
+    prop_at_freq_of_imu: True
+    check_satu: True
+    init_map_size: 10
+    point_filter_num: 8                                # 每8个点取1个，减少噪声敏感性
+    space_down_sample: True
+    filter_size_surf: 0.2
+    filter_size_map: 0.2
+    ivox_nearby_type: 18
+    runtime_pos_log_enable: False
+
+    common:
+      lid_topic: "velodyne_points"
+      imu_topic: "/red_standard_robot1/livox/imu"
+      con_frame: False
+      con_frame_num: 1
+      cut_frame: False                                 # 参考项目不切帧
+      cut_frame_time_interval: 0.05
+      time_diff_lidar_to_imu: 0.0
+
+    prior_pcd:
+      enable: False
+      # NOTE: `prior_pcd_map_path` will be provided in the launch file
+      # prior_pcd_map_path: ""
+      init_pose: [ 0.0, 0.0, 0.0 ]
+
+    preprocess:
+      lidar_type: 2                                    # Velodyne format (from converter)
+      scan_line: 32
+      timestamp_unit: 2                                # 关键！微秒。转换器输出秒，这里故意用微秒解析，
+                                                       # 使所有点时间戳≈0，禁用逐点运动补偿，大幅提升鲁棒性
+      blind: 0.5
+
+    mapping:
+      imu_en: True
+      extrinsic_est_en: False
+      imu_time_inte: 0.005                             # = 1 / 200Hz IMU
+      lidar_time_inte: 0.1                             # 故意偏大：增大预测协方差，让滤波器更信任LiDAR匹配
+      satu_acc: 30.0
+      satu_gyro: 35.0
+      acc_norm: 9.81                                   # 参考项目用9.81
+      lidar_meas_cov: 0.001
+      acc_cov_output: 500.0                            # 参考项目值，剧烈运动需要大过程噪声让滤波器跟上
+      gyr_cov_output: 1000.0                           # 参考项目值，同上
+      b_acc_cov: 0.0001
+      b_gyr_cov: 0.0001
+      imu_meas_acc_cov: 0.1                            # 参考项目值，不过度信任IMU
+      imu_meas_omg_cov: 0.1                            # 参考项目值，不过度信任IMU
+      gyr_cov_input: 0.01
+      acc_cov_input: 0.1
+      plane_thr: 0.1
+      match_s: 81.0
+      ivox_grid_resolution: 0.5
+      gravity: [0.0, 0.0, -9.810]
+      gravity_init: [2.539, 0.0, -9.476]               # 15° pitch: 9.81*sin(15)≈2.539, 9.81*cos(15)≈9.476
+      extrinsic_T: [ 0.0, 0.0, 0.0 ]
+      extrinsic_R: [ 1.0, 0.0, 0.0,
+                     0.0, 1.0, 0.0,
+                     0.0, 0.0, 1.0 ]
+
+    odometry:
+      publish_odometry_without_downsample: True
+
+    publish:
+      path_en: True
+      scan_publish_en: True
+      scan_bodyframe_pub_en: False
+      tf_send_en: False
+
+    pcd_save:
+      pcd_save_en: False
+      interval: -1
+
+loam_adapter:
+  ros__parameters:
+    odom_topic: "aft_mapped_to_init"  # 发布的里程计Ododmetry话题
+    pcd_topic: "cloud_registered"     # 发布的点云topic
+    odom_frame: "odom"
+    base_frame: "base_footprint"
+    lidar_frame: "front_mid360"
+
+relocalization:
+  ros__parameters:
+    num_threads: 4
+    num_neighbors: 20
+    global_leaf_size: 0.2                             # 全局地图降采样体素大小 (m)
+    registered_leaf_size: 0.2                         # 实时扫描降采样体素大小 (m)
+    max_dist_sq: 36.0                                   # GICP 对应点最大距离平方 (m²)
+    map_frame: "map"
+    odom_frame: "odom"
+    base_frame: "base_footprint"
+    lidar_frame: "front_mid360"
+    input_scan_topic: "registered_scan"                # 来自 loam_adapter 的 odom 帧点云
+    init_pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]        # [x, y, z, roll, pitch, yaw] 初始位姿种子
+
+lob_shot_manager:
+  ros__parameters:
+    # 目标点坐标 (map系, 单位m)
+    target_x: 23.12
+    target_y: 1.45
+    target_z: 0.86
+    # 弹道参数
+    bullet_speed: 16.0          # 弹丸初速 (m/s)
+    friction_coeff: 0.001       # 空气阻力系数
+    # 收敛容差 (rad)
+    yaw_tolerance: 0.005         # yaw到位判断容差 (~1.1°)
+    pitch_tolerance: 0.01       # pitch到位判断容差 (~1.1°)
+    pitch_converge_threshold: 0.005  # pitch外层迭代收敛阈值 (rad)
+    max_pitch_iters: 5          # pitch外层迭代最大次数
+    # 超时 (秒)
+    tf_timeout: 5.0             # 等待TF就绪超时
+    aim_timeout: 5.0            # 等待云台到位超时
+    # 话题名 (仿真环境通过launch remap加前缀)
+    gimbal_cmd_topic: "cmd_gimbal_joint"
+    joint_state_topic: "joint_states"
+    # 坐标系名
+    map_frame: "map"
+    chassis_frame: "chassis"
+    muzzle_frame: "muzzle"
+    # 关节名
+    yaw_joint_name: "gimbal_yaw_joint"
+    pitch_joint_name: "gimbal_pitch_joint"

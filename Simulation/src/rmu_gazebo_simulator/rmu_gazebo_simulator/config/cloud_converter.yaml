@@ -1,0 +1,7 @@
+ign_sim_pointcloud_tool:
+  ros__parameters:
+    pcd_topic: /red_standard_robot1/livox/lidar
+    n_scan: 32
+    horizon_scan: 1875
+    ang_bottom: 7.0
+    ang_res_y: 1.84375  # (7+52) / 32

@@ -1,0 +1,29 @@
+# User specified exclusions
+经验.txt
+fiter_box.py
+filter_box.py
+
+# ROS2 build artifacts
+build/
+install/
+log/
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Claude project config
+.claude/
+
+# Point-LIO generated PCD
+**/PCD/scans.pcd
+
+# Generated files
+*.gv
+*.pdf

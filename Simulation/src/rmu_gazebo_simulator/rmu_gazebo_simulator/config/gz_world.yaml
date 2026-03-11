@@ -1,0 +1,93 @@
+world: "rmuc_2026"
+
+robots:
+
+  rmuc_2026:
+    - name: "red_standard_robot1"
+      color: "red"
+      x_pose: "2.6"
+      y_pose: "6.5"
+      z_pose: "0.75"
+      yaw: "0.0"
+
+    # - name: "blue_standard_robot1"
+    #   color: "blue"
+    #   x_pose: "25.6"
+    #   y_pose: "6.45"
+    #   z_pose: "0.28"
+    #   yaw: "3.14"
+
+  rmul_2026:
+    - name: "red_standard_robot1"
+      color: "red"
+      x_pose: "-4.8"
+      y_pose: "3.5"
+      z_pose: "0.35"
+      yaw: "0.0"
+
+    # - name: "blue_standard_robot1"
+    #   color: "blue"
+    #   x_pose: "4.8"
+    #   y_pose: "-3.5"
+    #   z_pose: "0.28"
+    #   yaw: "3.14"
+
+  rmul_2024:
+    - name: "red_standard_robot1"
+      color: "red"
+      x_pose: "4.3"
+      y_pose: "3.35"
+      z_pose: "1.2"
+      yaw: "0.0"
+
+    - name: "blue_standard_robot1"
+      color: "blue"
+      x_pose: "10.4"
+      y_pose: "4.35"
+      z_pose: "1.2"
+      yaw: "3.14"
+
+  rmuc_2024:
+    - name: "red_standard_robot1"
+      color: "red"
+      x_pose: "6.35"
+      y_pose: "7.6"
+      z_pose: "0.2"
+      yaw: "0.0"
+
+    # - name: "blue_standard_robot1"
+    #   color: "blue"
+    #   x_pose: "22.8"
+    #   y_pose: "7.6"
+    #   z_pose: "0.2"
+    #   yaw: "3.14"
+
+  rmul_2025:
+    - name: "red_standard_robot1"
+      color: "red"
+      x_pose: "-4.8"
+      y_pose: "3.5"
+      z_pose: "0.28"
+      yaw: "0.0"
+
+    # - name: "blue_standard_robot1"
+    #   color: "blue"
+    #   x_pose: "4.8"
+    #   y_pose: "-3.5"
+    #   z_pose: "0.28"
+    #   yaw: "3.14"
+
+  rmuc_2025:
+    - name: "red_standard_robot1"
+      color: "red"
+      x_pose: "3.4"
+      y_pose: "9.5"
+      z_pose: "0.28"
+      yaw: "0.0"
+
+    # - name: "blue_standard_robot1"
+    #   color: "blue"
+    #   x_pose: "25.6"
+    #   y_pose: "6.45"
+    #   z_pose: "0.28"
+    #   yaw: "3.14"
