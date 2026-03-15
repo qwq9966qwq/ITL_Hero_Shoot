@@ -72,6 +72,15 @@ def generate_launch_description():
         output='screen',
     )
 
+    # --- 2b. Gimbal feedback adapter (rmoss Gimbal IMU -> JointState world angles) ---
+    gimbal_feedback_adapter = Node(
+        package='sim_adapter',
+        executable='gimbal_feedback_adapter',
+        namespace=robot_name,
+        parameters=[{'use_sim_time': True}],
+        output='screen',
+    )
+
     # --- 3. Our robot_state_publisher with simplified URDF ---
     # Process xacro at launch time
     urdf_path = LaunchConfiguration('urdf_path')
@@ -124,6 +133,7 @@ def generate_launch_description():
     ld.add_action(declare_urdf_path)
     ld.add_action(bringup_sim)
     ld.add_action(joint_state_adapter)
+    ld.add_action(gimbal_feedback_adapter)
     ld.add_action(robot_state_publisher_action)
 
     return ld

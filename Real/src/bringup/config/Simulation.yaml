@@ -93,8 +93,8 @@ relocalization:
   ros__parameters:
     num_threads: 4
     num_neighbors: 20
-    global_leaf_size: 0.2                             # 全局地图降采样体素大小 (m)
-    registered_leaf_size: 0.2                         # 实时扫描降采样体素大小 (m)
+    global_leaf_size: 0.15                             # 全局地图降采样体素大小 (m)
+    registered_leaf_size: 0.15                         # 实时扫描降采样体素大小 (m)
     max_dist_sq: 36.0                                   # GICP 对应点最大距离平方 (m²)
     map_frame: "map"
     odom_frame: "odom"
@@ -106,9 +106,9 @@ relocalization:
 lob_shot_manager:
   ros__parameters:
     # 目标点坐标 (map系, 单位m)
-    target_x: 23.12
-    target_y: 1.45
-    target_z: 0.86
+    target_x: 23.125
+    target_y: 1.510
+    target_z: 0.82
     # 弹道参数
     bullet_speed: 16.0          # 弹丸初速 (m/s)
     friction_coeff: 0.001       # 空气阻力系数
@@ -123,6 +123,7 @@ lob_shot_manager:
     # 话题名 (仿真环境通过launch remap加前缀)
     gimbal_cmd_topic: "cmd_gimbal_joint"
     joint_state_topic: "joint_states"
+    gimbal_feedback_topic: "/red_standard_robot1/gimbal_world_feedback"
     # 坐标系名
     map_frame: "map"
     chassis_frame: "chassis"

@@ -16,6 +16,7 @@ def generate_launch_description():
         remappings=[
             ('cmd_gimbal_joint', '/red_standard_robot1/cmd_gimbal_joint'),
             ('joint_states', '/red_standard_robot1/joint_states'),
+            ('gimbal_world_feedback', '/red_standard_robot1/gimbal_world_feedback'),
         ],
     )
 

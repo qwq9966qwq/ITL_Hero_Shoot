@@ -19,6 +19,7 @@ setup(
     entry_points={
         'console_scripts': [
             'joint_state_adapter = sim_adapter.joint_state_adapter:main',
+            'gimbal_feedback_adapter = sim_adapter.gimbal_feedback_adapter:main',
         ],
     },
 )

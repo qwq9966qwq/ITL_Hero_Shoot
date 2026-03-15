@@ -57,10 +57,12 @@ private:
   // Callbacks
   void triggerCallback(const std_msgs::msg::Bool::SharedPtr msg);
   void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr msg);
+  void gimbalWorldCallback(const sensor_msgs::msg::JointState::SharedPtr msg);
 
   // ROS interfaces
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr trigger_sub_;
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr gimbal_world_sub_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr gimbal_cmd_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr ready_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr status_pub_;
@@ -84,6 +86,10 @@ private:
   double current_yaw_{0.0};
   double current_pitch_{0.0};
 
+  // IMU world-frame readings (for convergence check)
+  double world_yaw_{0.0};
+  double world_pitch_{0.0};
+
   // Computed targets
   double target_yaw_{0.0};
   double target_yaw_in_map_{0.0};  // world-frame yaw (for sim PID command)
@@ -105,6 +111,7 @@ private:
   double aim_timeout_;
   std::string gimbal_cmd_topic_;
   std::string joint_state_topic_;
+  std::string gimbal_world_topic_;
   std::string map_frame_;
   std::string chassis_frame_;
   std::string muzzle_frame_;

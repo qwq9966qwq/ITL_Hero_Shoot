@@ -28,6 +28,7 @@ LobShotManagerNode::LobShotManagerNode(const rclcpp::NodeOptions & options)
   this->declare_parameter("aim_timeout", 5.0);
   this->declare_parameter("gimbal_cmd_topic", "cmd_gimbal_joint");
   this->declare_parameter("joint_state_topic", "joint_states");
+  this->declare_parameter("gimbal_feedback_topic", "gimbal_world_feedback");
   this->declare_parameter("map_frame", "map");
   this->declare_parameter("chassis_frame", "chassis");
   this->declare_parameter("muzzle_frame", "muzzle");
@@ -48,6 +49,7 @@ LobShotManagerNode::LobShotManagerNode(const rclcpp::NodeOptions & options)
   aim_timeout_ = this->get_parameter("aim_timeout").as_double();
   gimbal_cmd_topic_ = this->get_parameter("gimbal_cmd_topic").as_string();
   joint_state_topic_ = this->get_parameter("joint_state_topic").as_string();
+  gimbal_world_topic_ = this->get_parameter("gimbal_feedback_topic").as_string();
   map_frame_ = this->get_parameter("map_frame").as_string();
   chassis_frame_ = this->get_parameter("chassis_frame").as_string();
   muzzle_frame_ = this->get_parameter("muzzle_frame").as_string();
@@ -70,6 +72,10 @@ LobShotManagerNode::LobShotManagerNode(const rclcpp::NodeOptions & options)
   joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
     joint_state_topic_, 10,
     std::bind(&LobShotManagerNode::jointStateCallback, this, std::placeholders::_1));
+
+  gimbal_world_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
+    gimbal_world_topic_, 10,
+    std::bind(&LobShotManagerNode::gimbalWorldCallback, this, std::placeholders::_1));
 
   // Publishers
   gimbal_cmd_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(gimbal_cmd_topic_, 10);
@@ -176,30 +182,24 @@ void LobShotManagerNode::handleYawConverging()
   // Command world-frame yaw (sim PID uses IMU = world frame feedback)
   publishGimbalCmd(target_yaw_in_map_, current_pitch_);
 
-  // Check convergence in world frame: chassis_yaw + adapted_yaw vs target_world_yaw
-  double yaw_error = 0;
-  try {
-    auto tf = tf_buffer_->lookupTransform(map_frame_, chassis_frame_, tf2::TimePointZero);
-    double chassis_yaw = tf2::getYaw(tf.transform.rotation);
-    double current_world_yaw = chassis_yaw + current_yaw_;
-    yaw_error = current_world_yaw - target_yaw_in_map_;
-    // Normalize to [-pi, pi]
-    while (yaw_error > M_PI) yaw_error -= 2 * M_PI;
-    while (yaw_error < -M_PI) yaw_error += 2 * M_PI;
+  // Check convergence using IMU world feedback (same frame as PID)
+  double yaw_error = world_yaw_ - target_yaw_in_map_;
+  // Normalize to [-pi, pi]
+  while (yaw_error > M_PI) yaw_error -= 2 * M_PI;
+  while (yaw_error < -M_PI) yaw_error += 2 * M_PI;
 
-    if (fabs(yaw_error) < yaw_tolerance_) {
-      publishStatus("Yaw converged, solving pitch...");
-      pitch_iter_count_ = 0;
-      setState(State::PITCH_AIMING);
-      return;
-    }
-  } catch (const tf2::TransformException &) {}
+  if (fabs(yaw_error) < yaw_tolerance_) {
+    publishStatus("Yaw converged, solving pitch...");
+    pitch_iter_count_ = 0;
+    setState(State::PITCH_AIMING);
+    return;
+  }
 
   double elapsed = (this->now() - state_enter_time_).seconds();
   if (elapsed > aim_timeout_) {
     RCLCPP_ERROR(this->get_logger(),
       "Yaw convergence timeout. world_error=%.3f rad, adapted_yaw=%.3f, target_world=%.3f",
-      yaw_error, current_yaw_, target_yaw_in_map_);
+      yaw_error, world_yaw_, target_yaw_in_map_);
     publishStatus("ERROR: Yaw convergence timeout");
     setState(State::IDLE);
   }
@@ -238,7 +238,7 @@ void LobShotManagerNode::handlePitchConverging()
   // Keep sending gimbal command (world-frame yaw for sim PID)
   publishGimbalCmd(target_yaw_in_map_, target_pitch_);
 
-  double pitch_error = fabs(current_pitch_ - target_pitch_);
+  double pitch_error = fabs(world_pitch_ - target_pitch_);
   if (pitch_error < pitch_tolerance_) {
     // Joint reached target, check if outer iteration is needed
     double pitch_change = fabs(target_pitch_ - prev_pitch_);
@@ -270,7 +270,7 @@ void LobShotManagerNode::handlePitchConverging()
   if (elapsed > aim_timeout_) {
     RCLCPP_ERROR(this->get_logger(),
       "Pitch convergence timeout. Current: %.3f, target: %.3f, error: %.4f rad",
-      current_pitch_, target_pitch_, pitch_error);
+      world_pitch_, target_pitch_, pitch_error);
     publishStatus("ERROR: Pitch convergence timeout");
     setState(State::IDLE);
   }
@@ -555,6 +555,17 @@ void LobShotManagerNode::jointStateCallback(const sensor_msgs::msg::JointState::
       current_yaw_ = msg->position[i];
     } else if (msg->name[i] == pitch_joint_name_) {
       current_pitch_ = msg->position[i];
+    }
+  }
+}
+
+void LobShotManagerNode::gimbalWorldCallback(const sensor_msgs::msg::JointState::SharedPtr msg)
+{
+  for (size_t i = 0; i < msg->name.size() && i < msg->position.size(); ++i) {
+    if (msg->name[i] == yaw_joint_name_) {
+      world_yaw_ = msg->position[i];
+    } else if (msg->name[i] == pitch_joint_name_) {
+      world_pitch_ = msg->position[i];
     }
   }
 }
