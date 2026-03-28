@@ -197,5 +197,5 @@ src
 
 ## 致谢
 
-- [深圳北理莫斯科大学——北极熊战队](https://github.com/BearRobotics) 的导航与 Gazebo 仿真开源框架
+- [深圳北理莫斯科大学——北极熊战队](https://github.com/SMBU-PolarBear-Robotics-Team) 的导航与 Gazebo 仿真开源框架
 - RoboMaster OSS 社区
