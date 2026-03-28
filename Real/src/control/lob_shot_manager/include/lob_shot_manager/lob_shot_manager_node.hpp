@@ -86,11 +86,11 @@ private:
   double current_yaw_{0.0};
   double current_pitch_{0.0};
 
-  // IMU world-frame readings (for convergence check)
+  // IMU反馈的角度
   double world_yaw_{0.0};
   double world_pitch_{0.0};
 
-  // Computed targets
+  // 计算目标
   double target_yaw_{0.0};
   double target_yaw_in_map_{0.0};  // world-frame yaw (for sim PID command)
   double target_pitch_{0.0};

@@ -1,13 +1,22 @@
 # User specified exclusions
-经验.txt
-fiter_box.py
-filter_box.py
+scripts/
+Picture/
 
-# ROS2 build artifacts
+# ROS2 build artifacts (global)
 build/
 install/
 log/
 logs/
+
+# Real and Simulation build artifacts
+Real/build/
+Real/install/
+Real/log/
+Real/logs/
+Simulation/build/
+Simulation/install/
+Simulation/log/
+Simulation/logs/
 
 # Python
 __pycache__/

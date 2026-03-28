@@ -93,8 +93,8 @@ relocalization:
   ros__parameters:
     num_threads: 4
     num_neighbors: 20
-    global_leaf_size: 0.15                             # 全局地图降采样体素大小 (m)
-    registered_leaf_size: 0.15                         # 实时扫描降采样体素大小 (m)
+    global_leaf_size: 0.12                             # 全局地图降采样体素大小 (m)
+    registered_leaf_size: 0.12                         # 实时扫描降采样体素大小 (m)
     max_dist_sq: 36.0                                   # GICP 对应点最大距离平方 (m²)
     map_frame: "map"
     odom_frame: "odom"
@@ -108,12 +108,12 @@ lob_shot_manager:
     # 目标点坐标 (map系, 单位m)
     target_x: 23.125
     target_y: 1.510
-    target_z: 0.82
+    target_z: 0.84
     # 弹道参数
     bullet_speed: 16.0          # 弹丸初速 (m/s)
     friction_coeff: 0.001       # 空气阻力系数
     # 收敛容差 (rad)
-    yaw_tolerance: 0.005         # yaw到位判断容差 (~1.1°)
+    yaw_tolerance: 0.005         # yaw到位判断容差 (~0.2865°)
     pitch_tolerance: 0.01       # pitch到位判断容差 (~1.1°)
     pitch_converge_threshold: 0.005  # pitch外层迭代收敛阈值 (rad)
     max_pitch_iters: 5          # pitch外层迭代最大次数
