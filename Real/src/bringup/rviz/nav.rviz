@@ -70,7 +70,7 @@ Visualization Manager:
       Color Transformer: FlatColor
       Color: 0; 255; 0
       Alpha: 1
-      Decay Time: 0
+      Decay Time: 0.5
       Use Fixed Frame: true
 
     - Class: rviz_default_plugins/Odometry
@@ -145,8 +145,8 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 15
+      Class: rviz_default_plugins/Orbit
+      Distance: 20
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
@@ -161,10 +161,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.7
-      Target Frame: base_footprint
-      Value: ThirdPersonFollower
-      Yaw: 3.14
+      Pitch: 1.5707
+      Target Frame: <Fixed Frame>
+      Value: Orbit
+      Yaw: 0
 Window Geometry:
   Displays:
     collapsed: false

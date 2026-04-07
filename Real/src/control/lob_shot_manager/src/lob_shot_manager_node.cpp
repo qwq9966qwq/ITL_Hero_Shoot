@@ -417,7 +417,8 @@ void LobShotManagerNode::publishVisualization()
 
   // --- Marker 2: 当前云台朝向射线 (黄→绿, yaw阶段变色) ---
   {
-    double current_yaw_in_map = chassis_yaw + current_yaw_;
+    // 直接使用 IMU 世界系反馈 world_yaw_，避免小陀螺时 TF chassis_yaw 延迟
+    // 导致 (chassis_yaw_stale + current_yaw_live) 产生高频抖动
     double ray_len = std::hypot(target_x_ - gimbal_x, target_y_ - gimbal_y);
 
     visualization_msgs::msg::Marker m;
@@ -430,8 +431,8 @@ void LobShotManagerNode::publishVisualization()
 
     geometry_msgs::msg::Point start, end;
     start.x = gimbal_x; start.y = gimbal_y; start.z = gimbal_z + 0.3;
-    end.x = gimbal_x + ray_len * cos(current_yaw_in_map);
-    end.y = gimbal_y + ray_len * sin(current_yaw_in_map);
+    end.x = gimbal_x + ray_len * cos(world_yaw_);
+    end.y = gimbal_y + ray_len * sin(world_yaw_);
     end.z = gimbal_z + 0.3;
     m.points.push_back(start);
     m.points.push_back(end);
@@ -441,8 +442,7 @@ void LobShotManagerNode::publishVisualization()
     m.scale.z = 0.08;  // head length
 
     // yaw 对齐时从黄变绿 (世界坐标系比较)
-    double current_world_yaw = chassis_yaw + current_yaw_;
-    double yaw_err = fabs(current_world_yaw - target_yaw_in_map_);
+    double yaw_err = fabs(world_yaw_ - target_yaw_in_map_);
     if (yaw_err > M_PI) yaw_err = 2 * M_PI - yaw_err;
     double blend = std::min(1.0, yaw_err / 0.5);  // 0.5rad内线性过渡
     m.color.r = blend;

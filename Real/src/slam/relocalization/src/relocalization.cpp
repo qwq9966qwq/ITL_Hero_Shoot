@@ -172,7 +172,27 @@ void RelocalizationNode::performRegistration()
   auto result = register_->align(*target_, *source_, *target_tree_, previous_result_t_);
 
   if (result.converged) {
-    result_t_ = previous_result_t_ = result.T_target_source;
+    // 对 GICP 结果做平滑处理，防止小陀螺旋转时 Z 轴漂移纠正产生跳变：
+    // - XY 平移：限速不超过 0.1 m/次（防止位置跳变）
+    // - Z 平移：限速不超过 0.05 m/次（地面机器人 Z 漂移通常很小，大值说明是噪声）
+    // - 旋转：直接接受（GICP 旋转估计通常稳定）
+    auto & new_t = result.T_target_source;
+    Eigen::Vector3d delta = new_t.translation() - previous_result_t_.translation();
+
+    constexpr double kMaxXYStep = 0.10;  // m/次
+    constexpr double kMaxZStep  = 0.05;  // m/次
+
+    double xy_norm = delta.head<2>().norm();
+    if (xy_norm > kMaxXYStep) {
+      delta.head<2>() *= (kMaxXYStep / xy_norm);
+    }
+    delta.z() = std::clamp(delta.z(), -kMaxZStep, kMaxZStep);
+
+    Eigen::Isometry3d smoothed = Eigen::Isometry3d::Identity();
+    smoothed.translation() = previous_result_t_.translation() + delta;
+    smoothed.linear() = new_t.rotation();  // 旋转直接取新值
+
+    result_t_ = previous_result_t_ = smoothed;
   } else {
     RCLCPP_WARN(this->get_logger(), "GICP did not converge");
   }
