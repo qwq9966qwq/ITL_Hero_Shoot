@@ -14,6 +14,7 @@ find_package(tf2_eigen REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(OpenMP REQUIRED)
+find_package(utils REQUIRED)
 
 # Fetch small_gicp library
 include(FetchContent)
@@ -44,7 +45,7 @@ ament_target_dependencies(${PROJECT_NAME}
   pcl_conversions
 )
 
-target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX small_gicp)
+target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX small_gicp utils::utils)
 
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "relocalization::RelocalizationNode"

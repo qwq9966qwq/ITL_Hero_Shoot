@@ -19,6 +19,7 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>projectile_motion</depend>
   <depend>lob_shot_aiming</depend>
+  <depend>utils</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

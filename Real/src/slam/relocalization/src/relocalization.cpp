@@ -2,6 +2,7 @@
 
 #include <pcl/filters/voxel_grid.h>
 
+#include "logger.hpp"
 #include "pcl_conversions/pcl_conversions.h"
 #include "small_gicp/pcl/pcl_registration.hpp"
 #include "small_gicp/util/downsampling_omp.hpp"
@@ -146,6 +147,17 @@ void RelocalizationNode::scanCallback(const sensor_msgs::msg::PointCloud2::Share
 
 void RelocalizationNode::performRegistration()
 {
+  // 诊断：最早期日志，确认函数被调用 & 点云状态
+  static int diag_call_count = 0;
+  ++diag_call_count;
+  const bool diag_log = (diag_call_count <= 10);
+
+  if (diag_log) {
+    utils::logger()->info(
+      "[RELOC_DIAG#{}] entry: acc_size={} has_scan={}",
+      diag_call_count, accumulated_cloud_->size(), (int)has_scan_);
+  }
+
   if (accumulated_cloud_->empty()) {
     return;
   }
@@ -169,7 +181,27 @@ void RelocalizationNode::performRegistration()
   register_->rejector.max_dist_sq = max_dist_sq_;
   register_->optimizer.max_iterations = 10;
 
+  if (diag_log) {
+    double seed_yaw = std::atan2(
+      previous_result_t_.linear()(1, 0), previous_result_t_.linear()(0, 0));
+    utils::logger()->info(
+      "[DIAG#{}] in: acc={} src={} seed_xy=({:.3f},{:.3f}) seed_yaw={:.4f} rad",
+      diag_call_count, accumulated_cloud_->size(), source_->size(),
+      previous_result_t_.translation().x(), previous_result_t_.translation().y(),
+      seed_yaw);
+  }
+
   auto result = register_->align(*target_, *source_, *target_tree_, previous_result_t_);
+
+  if (diag_log) {
+    double out_yaw = std::atan2(
+      result.T_target_source.linear()(1, 0), result.T_target_source.linear()(0, 0));
+    utils::logger()->info(
+      "[DIAG#{}] out: conv={} iter={} err={:.5f} out_xy=({:.3f},{:.3f}) out_yaw={:.4f} rad",
+      diag_call_count, (int)result.converged, (size_t)result.iterations, result.error,
+      result.T_target_source.translation().x(), result.T_target_source.translation().y(),
+      out_yaw);
+  }
 
   if (result.converged) {
     // 对 GICP 结果做平滑处理，防止小陀螺旋转时 Z 轴漂移纠正产生跳变：

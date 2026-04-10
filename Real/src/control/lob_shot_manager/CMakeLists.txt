@@ -16,6 +16,7 @@ find_package(visualization_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(projectile_motion REQUIRED)
 find_package(lob_shot_aiming REQUIRED)
+find_package(utils REQUIRED)
 
 add_executable(lob_shot_manager_node
   src/lob_shot_manager_node.cpp
@@ -41,6 +42,8 @@ ament_target_dependencies(lob_shot_manager_node PUBLIC
   projectile_motion
   lob_shot_aiming
 )
+
+target_link_libraries(lob_shot_manager_node PUBLIC utils::utils)
 
 install(
   TARGETS lob_shot_manager_node

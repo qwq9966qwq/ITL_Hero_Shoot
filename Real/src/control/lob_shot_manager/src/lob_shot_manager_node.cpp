@@ -3,13 +3,27 @@
 #include <cmath>
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
 
+#include "logger.hpp"
 #include "tf2/utils.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "projectile_motion/gaf_projectile_solver.hpp"
 
 namespace lob_shot_manager
 {
+
+namespace
+{
+
+double normalizeAngle(double angle)
+{
+  while (angle > M_PI) angle -= 2.0 * M_PI;
+  while (angle < -M_PI) angle += 2.0 * M_PI;
+  return angle;
+}
+
+}  // namespace
 
 LobShotManagerNode::LobShotManagerNode(const rclcpp::NodeOptions & options)
 : Node("lob_shot_manager", options)
@@ -34,6 +48,8 @@ LobShotManagerNode::LobShotManagerNode(const rclcpp::NodeOptions & options)
   this->declare_parameter("muzzle_frame", "muzzle");
   this->declare_parameter("yaw_joint_name", "gimbal_yaw_joint");
   this->declare_parameter("pitch_joint_name", "gimbal_pitch_joint");
+  this->declare_parameter("gimbal_yaw_frame", "gimbal_yaw");
+  this->declare_parameter("offset_min_wait", 2.0);
 
   // Load parameters
   target_x_ = this->get_parameter("target_x").as_double();
@@ -55,6 +71,10 @@ LobShotManagerNode::LobShotManagerNode(const rclcpp::NodeOptions & options)
   muzzle_frame_ = this->get_parameter("muzzle_frame").as_string();
   yaw_joint_name_ = this->get_parameter("yaw_joint_name").as_string();
   pitch_joint_name_ = this->get_parameter("pitch_joint_name").as_string();
+  gimbal_yaw_frame_ = this->get_parameter("gimbal_yaw_frame").as_string();
+  offset_min_wait_ = this->get_parameter("offset_min_wait").as_double();
+
+  node_start_time_ = this->now();
 
   // TF
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -156,6 +176,11 @@ void LobShotManagerNode::handleWaitingTf()
 
 void LobShotManagerNode::handleYawAiming()
 {
+  if (!tryComputeYawOffset()) {
+    publishStatus("Waiting yaw offset calibration...");
+    return;
+  }
+
   auto result = aiming_->solveYaw(target_x_, target_y_, target_z_);
   if (!result.success) {
     RCLCPP_ERROR(this->get_logger(), "Yaw solve failed: %s", result.message.c_str());
@@ -164,14 +189,18 @@ void LobShotManagerNode::handleYawAiming()
     return;
   }
 
-  target_yaw_ = result.angle;                // chassis-relative (for logging)
-  target_yaw_in_map_ = result.angle_world;   // world-frame (for PID command)
+  target_yaw_ = result.angle;
+  target_yaw_in_map_ = result.angle_world;
 
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(1)
-      << "Yaw solved: " << (target_yaw_ * 180.0 / M_PI) << " deg (world: "
-      << (target_yaw_in_map_ * 180.0 / M_PI) << " deg), waiting convergence...";
+      << "Yaw solved: " << (target_yaw_ * 180.0 / M_PI) << " deg (map: "
+      << (target_yaw_in_map_ * 180.0 / M_PI) << " deg, offset: "
+      << (yaw_offset_ * 180.0 / M_PI) << " deg), waiting convergence...";
   RCLCPP_INFO(this->get_logger(), "%s", oss.str().c_str());
+  utils::logger()->info(
+    "[LOB_CMD] yaw solved: target_rel={:.4f} target_map={:.4f} yaw_offset={:.4f}",
+    target_yaw_, target_yaw_in_map_, yaw_offset_);
   publishStatus(oss.str());
 
   setState(State::YAW_CONVERGING);
@@ -179,16 +208,16 @@ void LobShotManagerNode::handleYawAiming()
 
 void LobShotManagerNode::handleYawConverging()
 {
-  // Command world-frame yaw (sim PID uses IMU = world frame feedback)
-  publishGimbalCmd(target_yaw_in_map_, current_pitch_);
+  const double target_yaw_in_imu = normalizeAngle(target_yaw_in_map_ - yaw_offset_);
+  publishGimbalCmd(target_yaw_in_imu, current_pitch_);
 
-  // Check convergence using IMU world feedback (same frame as PID)
-  double yaw_error = world_yaw_ - target_yaw_in_map_;
-  // Normalize to [-pi, pi]
-  while (yaw_error > M_PI) yaw_error -= 2 * M_PI;
-  while (yaw_error < -M_PI) yaw_error += 2 * M_PI;
+  const double current_yaw_in_map = normalizeAngle(world_yaw_ + yaw_offset_);
+  const double yaw_error = normalizeAngle(current_yaw_in_map - target_yaw_in_map_);
 
   if (fabs(yaw_error) < yaw_tolerance_) {
+    utils::logger()->info(
+      "[LOB_AIM] yaw converged: cur_map={:.4f} target_map={:.4f} cur_imu={:.4f} cmd_imu={:.4f} err={:.4f}",
+      current_yaw_in_map, target_yaw_in_map_, world_yaw_, target_yaw_in_imu, yaw_error);
     publishStatus("Yaw converged, solving pitch...");
     pitch_iter_count_ = 0;
     setState(State::PITCH_AIMING);
@@ -198,8 +227,11 @@ void LobShotManagerNode::handleYawConverging()
   double elapsed = (this->now() - state_enter_time_).seconds();
   if (elapsed > aim_timeout_) {
     RCLCPP_ERROR(this->get_logger(),
-      "Yaw convergence timeout. world_error=%.3f rad, adapted_yaw=%.3f, target_world=%.3f",
-      yaw_error, world_yaw_, target_yaw_in_map_);
+      "Yaw convergence timeout. map_error=%.3f rad, cur_map=%.3f, target_map=%.3f, yaw_offset=%.3f",
+      yaw_error, current_yaw_in_map, target_yaw_in_map_, yaw_offset_);
+    utils::logger()->warn(
+      "[LOB_AIM] yaw timeout: cur_map={:.4f} target_map={:.4f} cur_imu={:.4f} cmd_imu={:.4f} offset={:.4f} err={:.4f}",
+      current_yaw_in_map, target_yaw_in_map_, world_yaw_, target_yaw_in_imu, yaw_offset_, yaw_error);
     publishStatus("ERROR: Yaw convergence timeout");
     setState(State::IDLE);
   }
@@ -235,8 +267,8 @@ void LobShotManagerNode::handlePitchAiming()
 
 void LobShotManagerNode::handlePitchConverging()
 {
-  // Keep sending gimbal command (world-frame yaw for sim PID)
-  publishGimbalCmd(target_yaw_in_map_, target_pitch_);
+  const double target_yaw_in_imu = normalizeAngle(target_yaw_in_map_ - yaw_offset_);
+  publishGimbalCmd(target_yaw_in_imu, target_pitch_);
 
   double pitch_error = fabs(world_pitch_ - target_pitch_);
   if (pitch_error < pitch_tolerance_) {
@@ -283,7 +315,8 @@ void LobShotManagerNode::handleReady()
   ready_msg.data = true;
   ready_pub_->publish(ready_msg);
 
-  publishGimbalCmd(target_yaw_in_map_, target_pitch_);
+  const double target_yaw_in_imu = normalizeAngle(target_yaw_in_map_ - yaw_offset_);
+  publishGimbalCmd(target_yaw_in_imu, target_pitch_);
 
   // If re-triggered, restart aiming directly (skip IDLE)
   if (triggered_) {
@@ -318,6 +351,67 @@ void LobShotManagerNode::publishStatus(const std::string & msg)
   std_msgs::msg::String status;
   status.data = "[" + stateName(state_) + "] " + msg;
   status_pub_->publish(status);
+}
+
+bool LobShotManagerNode::tryComputeYawOffset()
+{
+  if (yaw_offset_ready_) {
+    return true;
+  }
+
+  static int wait_log_count = 0;
+  const double elapsed_since_start = (this->now() - node_start_time_).seconds();
+  if (elapsed_since_start < offset_min_wait_) {
+    if (wait_log_count < 5) {
+      utils::logger()->info(
+        "[LOB_YAW_OFFSET] waiting startup: elapsed={:.3f}s min_wait={:.3f}s",
+        elapsed_since_start, offset_min_wait_);
+      ++wait_log_count;
+    }
+    return false;
+  }
+
+  geometry_msgs::msg::TransformStamped tf_map_gimbal;
+  try {
+    tf_map_gimbal = tf_buffer_->lookupTransform(
+      map_frame_, gimbal_yaw_frame_, tf2::TimePointZero);
+  } catch (const tf2::TransformException & ex) {
+    if (wait_log_count < 10) {
+      utils::logger()->warn(
+        "[LOB_YAW_OFFSET] waiting TF {}->{}: {}",
+        map_frame_, gimbal_yaw_frame_, ex.what());
+      ++wait_log_count;
+    }
+    return false;
+  }
+
+  const double map_yaw = tf2::getYaw(tf_map_gimbal.transform.rotation);
+  const double imu_yaw = world_yaw_;
+  yaw_offset_ = normalizeAngle(map_yaw - imu_yaw);
+  yaw_offset_ready_ = true;
+
+  tf2::Quaternion q;
+  tf2::fromMsg(tf_map_gimbal.transform.rotation, q);
+  double map_roll = 0.0;
+  double map_pitch = 0.0;
+  double map_yaw_check = 0.0;
+  tf2::Matrix3x3(q).getRPY(map_roll, map_pitch, map_yaw_check);
+  const double pitch_diff = normalizeAngle(map_pitch - world_pitch_);
+
+  utils::logger()->info(
+    "[LOB_YAW_OFFSET] computed: map_yaw={:.4f} imu_yaw={:.4f} offset={:.4f}",
+    map_yaw, imu_yaw, yaw_offset_);
+  utils::logger()->info(
+    "[LOB_PITCH_DIAG] map_pitch={:.4f} imu_pitch={:.4f} diff={:.4f} map_roll={:.4f}",
+    map_pitch, world_pitch_, pitch_diff, map_roll);
+  RCLCPP_INFO(this->get_logger(),
+    "Yaw offset computed: map_yaw=%.4f imu_yaw=%.4f offset=%.4f rad",
+    map_yaw, imu_yaw, yaw_offset_);
+  RCLCPP_INFO(this->get_logger(),
+    "Pitch diag: map_pitch=%.4f imu_pitch=%.4f diff=%.4f rad",
+    map_pitch, world_pitch_, pitch_diff);
+
+  return true;
 }
 
 std::string LobShotManagerNode::stateName(State s)
@@ -392,7 +486,6 @@ void LobShotManagerNode::publishVisualization()
   double gimbal_x = tf_map_chassis.transform.translation.x;
   double gimbal_y = tf_map_chassis.transform.translation.y;
   double gimbal_z = tf_map_chassis.transform.translation.z;
-  double chassis_yaw = tf2::getYaw(tf_map_chassis.transform.rotation);
 
   // --- Marker 1: 云台到目标连线 (绿色虚线) ---
   {
@@ -429,10 +522,12 @@ void LobShotManagerNode::publishVisualization()
     m.type = visualization_msgs::msg::Marker::ARROW;
     m.action = visualization_msgs::msg::Marker::ADD;
 
+    const double current_yaw_in_map = normalizeAngle(world_yaw_ + yaw_offset_);
+
     geometry_msgs::msg::Point start, end;
     start.x = gimbal_x; start.y = gimbal_y; start.z = gimbal_z + 0.3;
-    end.x = gimbal_x + ray_len * cos(world_yaw_);
-    end.y = gimbal_y + ray_len * sin(world_yaw_);
+    end.x = gimbal_x + ray_len * cos(current_yaw_in_map);
+    end.y = gimbal_y + ray_len * sin(current_yaw_in_map);
     end.z = gimbal_z + 0.3;
     m.points.push_back(start);
     m.points.push_back(end);
@@ -441,9 +536,8 @@ void LobShotManagerNode::publishVisualization()
     m.scale.y = 0.06;  // head diameter
     m.scale.z = 0.08;  // head length
 
-    // yaw 对齐时从黄变绿 (世界坐标系比较)
-    double yaw_err = fabs(world_yaw_ - target_yaw_in_map_);
-    if (yaw_err > M_PI) yaw_err = 2 * M_PI - yaw_err;
+    // yaw 对齐时从黄变绿 (统一在 map 坐标系比较)
+    double yaw_err = fabs(normalizeAngle(current_yaw_in_map - target_yaw_in_map_));
     double blend = std::min(1.0, yaw_err / 0.5);  // 0.5rad内线性过渡
     m.color.r = blend;
     m.color.g = 1.0;

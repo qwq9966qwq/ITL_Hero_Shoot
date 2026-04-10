@@ -54,6 +54,9 @@ private:
   void clearVisualization();
   std::string stateName(State s);
 
+  // Yaw offset calibration (IMU世界系 → map帧的 yaw 补偿)
+  bool tryComputeYawOffset();
+
   // Callbacks
   void triggerCallback(const std_msgs::msg::Bool::SharedPtr msg);
   void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr msg);
@@ -90,6 +93,13 @@ private:
   double world_yaw_{0.0};
   double world_pitch_{0.0};
 
+  // Yaw offset: map帧 和 IMU世界系 之间的 yaw 差值
+  // offset = map_yaw_of_gimbal - imu_yaw_of_gimbal
+  // 发给云台 PID 的指令: target_in_imu = target_in_map - yaw_offset_
+  double yaw_offset_{0.0};
+  bool yaw_offset_ready_{false};
+  rclcpp::Time node_start_time_;
+
   // 计算目标
   double target_yaw_{0.0};
   double target_yaw_in_map_{0.0};  // world-frame yaw (for sim PID command)
@@ -117,6 +127,8 @@ private:
   std::string muzzle_frame_;
   std::string yaw_joint_name_;
   std::string pitch_joint_name_;
+  std::string gimbal_yaw_frame_;   // 云台 yaw 轴 TF 帧名，用于计算 offset
+  double offset_min_wait_;         // 启动后等待 relocalization 稳定的最短时间 (s)
 };
 
 }  // namespace lob_shot_manager

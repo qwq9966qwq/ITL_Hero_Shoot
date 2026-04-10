@@ -131,3 +131,6 @@ lob_shot_manager:
     # 关节名
     yaw_joint_name: "gimbal_yaw_joint"
     pitch_joint_name: "gimbal_pitch_joint"
+    # yaw offset 标定参数
+    gimbal_yaw_frame: "gimbal_yaw"
+    offset_min_wait: 2.0
