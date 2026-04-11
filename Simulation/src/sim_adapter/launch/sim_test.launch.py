@@ -10,10 +10,11 @@ Usage:
 
     # If robot_description package is not installed, specify URDF path:
     ros2 launch sim_adapter sim_test.launch.py \
-        urdf_path:=/home/guo/Hero_Shoot/Real/src/description/robot_description/urdf/sentry_real.urdf.xacro
+        urdf_path:=/path/to/Real/src/description/robot_description/urdf/sentry_real.urdf.xacro
 """
 
 import os
+from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -30,17 +31,17 @@ def generate_launch_description():
     pkg_simulator = get_package_share_directory('rmu_gazebo_simulator')
     bringup_sim_path = os.path.join(pkg_simulator, 'launch', 'bringup_sim.launch.py')
 
-    # Locate simplified URDF: try robot_description package first, fallback to known path
+    # Locate simplified URDF: try robot_description package first, fallback to repo-relative path
     try:
         pkg_robot_desc = get_package_share_directory('robot_description')
         default_urdf = os.path.join(
             pkg_robot_desc, 'urdf', 'sentry_real.urdf.xacro'
         )
     except Exception:
-        default_urdf = os.path.join(
-            os.path.expanduser('~'),
-            'Hero_Shoot', 'Real', 'src', 'description',
-            'robot_description', 'urdf', 'sentry_real.urdf.xacro',
+        repo_root = Path(__file__).resolve().parents[4]
+        default_urdf = str(
+            repo_root / 'Real' / 'src' / 'description' /
+            'robot_description' / 'urdf' / 'sentry_real.urdf.xacro'
         )
 
     # --- Launch arguments ---

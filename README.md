@@ -32,7 +32,10 @@
 触发信号
    │
    ▼
-WAITING_TF ──── TF树就绪 ────▶ YAW_AIMING
+WAITING_TF ──── TF树就绪 ────▶ MAP_ALIGNMENT
+                                    │ map系统一与手摆误差补偿
+                                    ▼
+                               YAW_AIMING
                                     │ solveYaw（map坐标系）
                                     ▼
                               YAW_CONVERGING
