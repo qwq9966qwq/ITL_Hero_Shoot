@@ -129,6 +129,30 @@ ros2 topic pub --once /red_standard_robot1/robot_base/shoot_cmd \
   "{projectile_num: 1, projectile_velocity: 16.0, type: 1}"
 ```
 
+**6. 测试手摆车误差**
+
+先运行底盘控制节点：
+
+```bash
+ros2 run rmoss_gz_base test_chassis_cmd.py \
+  --ros-args -r __ns:=/red_standard_robot1/robot_base \
+  -p v:=1.5 -p w:=1.2
+```
+
+输入 `z`，切换到仅控制云台的模式。
+
+随后运行云台控制节点：
+
+```bash
+ros2 run rmoss_gz_base test_gimbal_cmd.py --ros-args -r __ns:=/red_standard_robot1/robot_base
+```
+
+将云台转动到指定角度后，在 `gz_world.yaml` 中修改 `yaw`，人为给整车施加一定的偏移角度。
+
+进行该测试时，建议先启动 Gazebo 并完成姿态调整，再启动算法端。这样可以模拟比赛准备阶段手摆车带来的初始误差，并验证该误差对重定位与校准对齐的影响。
+
+测试过程中，可查看 `lob_shot_manager` 中 401～406 行附近的日志，以观察系统对手摆误差的修正量，以及对初始偏差的补偿效果。
+
 ---
 
 ## 调试说明
